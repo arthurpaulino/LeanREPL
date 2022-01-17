@@ -15,11 +15,10 @@ def commandElabCtx : Context := {
   fileMap := { source := "", positions := #[0], lines := #[1] }
 }
 
-def runCommandElabM (env : Environment) (commandElabM : CommandElabM Unit) :
+def runCommandElabM (commandElabM : CommandElabM Unit) (env : Environment) :
     IO Unit := do
   let _ ← (commandElabM commandElabCtx).run
     { env := env, maxRecDepth := defaultMaxRecDepth } |>.toIO'
-  pure ()
 
 def parseCommand (cmd : String) : CommandElabM Unit := do
   match Parser.runParserCategory (← getEnv) `command cmd fileName with
@@ -32,12 +31,19 @@ def parseCommand (cmd : String) : CommandElabM Unit := do
 
 partial def loop : CommandElabM Unit := do
   IO.print "> "
-  let cmd ← (← (← IO.getStdin).getLine)
-  try parseCommand cmd
-  catch | e => IO.println $ ← e.toMessageData.toString
-  loop
+  let cmdIn ← (← (← IO.getStdin).getLine)
+  let cmd ← if cmdIn.length = 0 then "\n" else cmdIn
+  let mut mustLoop : Bool ← true
+  if cmd.data ≠ ['\n'] then
+    if cmd.data.head! ≠ '!' then
+      try parseCommand cmd
+      catch | e => IO.println $ ← e.toMessageData.toString
+    else
+      -- how to quit the monad and signal a message?
+      mustLoop ← false
+  if mustLoop then loop
 
 def main : IO Unit := do
   initSearchPath (← findSysroot?)
   let env ← importModules [{ module := `Init }] {}
-  let _ ← runCommandElabM env loop
+  let _ ← runCommandElabM loop env
