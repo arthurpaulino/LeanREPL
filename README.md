@@ -26,8 +26,8 @@ Meta-commands are just commands that start with "!" and allow extra control
 of the REPL. The ones available are:
 
 * `!quit` exits the REPL
+* `!rb <n>` rolls the REPL back to the state it was `n` commands ago
 * `!reset` resets the REPL to the initial state
-* `!rb <n>` resets the REPL to the state it was `n` commands ago
 
 Example:
 
