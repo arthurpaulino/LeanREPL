@@ -11,7 +11,7 @@ open Lean Lean.Elab Lean.Elab.Command
 def runCommandElabM (commandElabM : CommandElabM Unit) : IO Unit := do
   initSearchPath (← findSysroot?)
   
-  let commandElabCtx : Command.Context := {
+  let commandElabCtx : Context := {
     fileName := "repl",
     fileMap := { source := "", positions := #[0], lines := #[1] }
   }
@@ -25,7 +25,7 @@ def parseCommand (cmd : String) : CommandElabM Unit := do
   | Except.error err => throwError err
   | Except.ok stx    =>
     let _ ← modifyGet fun st => (st.messages, { st with messages := {} })
-    Elab.Command.elabCommandTopLevel stx
+    elabCommandTopLevel stx
     let s ← get
     for msg in s.messages.msgs do
       IO.print $ ← msg.toString
