@@ -80,4 +80,4 @@ def buildImports (moduleNames : List String) : List Import :=
 def main (args : List String) : IO Unit := do
   initSearchPath (← findSysroot?)
   let imports ← buildImports args
-  let _ ← runCommandElabM $ loop imports (← cleanStack imports)
+  runCommandElabM $ loop imports (← cleanStack imports)
