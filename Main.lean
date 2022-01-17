@@ -8,35 +8,36 @@ import Lean
 
 open Lean Lean.Elab Lean.Elab.Command
 
-def runCommandElabM (commandElabM : CommandElabM Unit) : IO Unit := do
-  initSearchPath (← findSysroot?)
-  
-  let commandElabCtx : Context := {
-    fileName := "repl",
-    fileMap := { source := "", positions := #[0], lines := #[1] }
-  }
-  
+def fileName : String := "repl"
+
+def commandElabCtx : Context := {
+  fileName := fileName,
+  fileMap := { source := "", positions := #[0], lines := #[1] }
+}
+
+def runCommandElabM (env : Environment) (commandElabM : CommandElabM Unit) :
+    IO Unit := do
   let _ ← (commandElabM commandElabCtx).run
-    {env := ← importModules [{ module := `Init }] {},
-      maxRecDepth := defaultMaxRecDepth} |>.toIO'
+    { env := env, maxRecDepth := defaultMaxRecDepth } |>.toIO'
+  pure ()
 
 def parseCommand (cmd : String) : CommandElabM Unit := do
-  match Parser.runParserCategory (← getEnv) `command cmd "repl" with
+  match Parser.runParserCategory (← getEnv) `command cmd fileName with
   | Except.error err => throwError err
   | Except.ok stx    =>
     let _ ← modifyGet fun st => (st.messages, { st with messages := {} })
     elabCommandTopLevel stx
-    let s ← get
-    for msg in s.messages.msgs do
+    for msg in (← get).messages.msgs do
       IO.print $ ← msg.toString
-    printTraces
 
 partial def loop : CommandElabM Unit := do
   IO.print "> "
   let cmd ← (← (← IO.getStdin).getLine)
   try parseCommand cmd
-  catch | e => IO.println $ ← MessageData.toString e.toMessageData
+  catch | e => IO.println $ ← e.toMessageData.toString
   loop
 
 def main : IO Unit := do
-  let _ ← runCommandElabM loop
+  initSearchPath (← findSysroot?)
+  let env ← importModules [{ module := `Init }] {}
+  let _ ← runCommandElabM env loop
