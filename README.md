@@ -1,7 +1,7 @@
 # LeanREPL
 
 A simple REPL environment for Lean 4 that also supports meta-commands
-(commands starting with '!').
+(commands starting with "!").
 
 The code in this repository was adapted from:
 
