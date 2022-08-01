@@ -19,6 +19,7 @@ def defaultModuleNames : List String := ["Init"]
 def commandElabCtx : Context := {
   fileName := fileName,
   fileMap := { source := "", positions := #[0], lines := #[1] }
+  tacticCache? := none
 }
 
 def runCommandElabM (commandElabM : CommandElabM Unit) :
@@ -36,33 +37,33 @@ def runCommand (cmd : String) : CommandElabM Unit := do
       IO.print $ ← msg.toString
 
 def cleanStack (imports : List Import) : IO (Stack Environment) := do
-  Stack.empty |>.push $ ← importModules imports {}
+  pure $ Stack.empty |>.push $ ← importModules imports {}
 
 partial def loop (imports : List Import) (envs : Stack Environment) :
     CommandElabM Unit := do
   setEnv envs.peek!
   IO.print "> "
-  let cmdIn ← (← (← IO.getStdin).getLine)
-  let cmd ← if cmdIn.length = 0 then "\n" else cmdIn
+  let cmdIn ← (← IO.getStdin).getLine
+  let cmd := if cmdIn.length = 0 then "\n" else cmdIn
   if cmd ≠ "\n" then
     if cmd.data.head! ≠ '!' then
       try runCommand cmd
       catch | e => IO.println $ ← e.toMessageData.toString
     else
-      let metaCmd ← String.mk cmd.trim.data.tail!
+      let metaCmd := String.mk cmd.trim.data.tail!
       -- handling meta-commands without parameters
       if metaCmd = "quit" then return
       if metaCmd = "reset" then
         loop imports (← cleanStack imports)
         return
-      let split ← metaCmd.splitOn " "
-      let metaCmd ← split.head!
+      let split := metaCmd.splitOn " "
+      let metaCmd := split.head!
       -- handling meta-commands with parameters
       if metaCmd = "rb" then
-        let metaPar ← split.getLast!.toNat!
-        let mut envs' ← envs
+        let metaPar := split.getLast!.toNat!
+        let mut envs' := envs
         for _ in [0 : metaPar] do
-          envs' ← envs'.pop
+          envs' := envs'.pop
         loop imports envs'
         return
       -- handling invalid meta-commands
@@ -78,6 +79,6 @@ def buildImports (moduleNames : List String) : List Import :=
     |>.map fun s => { module := Name.mkSimple s }
 
 def main (args : List String) : IO Unit := do
-  initSearchPath (← findSysroot?)
-  let imports ← buildImports args
+  initSearchPath (← findSysroot)
+  let imports := buildImports args
   runCommandElabM $ loop imports (← cleanStack imports)
